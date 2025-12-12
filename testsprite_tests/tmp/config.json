@@ -1,0 +1,20 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:3000/campaigns",
+  "executionArgs": {
+    "projectName": "tech-mkt-manager",
+    "projectPath": "c:\\업무\\작업_MKT\\tech-mkt-manager",
+    "testIds": [
+      "TC001",
+      "TC003",
+      "TC004"
+    ],
+    "additionalInstruction": "Test the campaign list filtering.\nTC001: Filter by 'ASUS MB' and check if other brands are filtered out.\nTC003: Filter by 'ASUS MB' and 'Q1' and check strict matching.\nTC004: Click Reset button and check if all items return.\nEnsure you wait for the campaign list to load (it might take a moment for Firestore data).",
+    "envs": {
+      "API_KEY": "sk-user-Fhob7ezjlWSLEZB67t3XnZxEIfwzUfPsZm2raurcuG0qz_JJUY-t0iHj74yZD69cSK_M0UAVMXLq5rNO_1CImWt6nXf6vbqMKKt6OvAMZf7a0oXcvHmp64nelC9V09AiDdE"
+    }
+  },
+  "proxy": "http://88cc4038-ce5c-41fe-baae-4361ad62f02f:ZZTHxRt5eIItYcH8g61uUaKQq2EK3dgS@tun.testsprite.com:8080"
+}

@@ -1,0 +1,10 @@
+{
+  "tech_stack": ["TypeScript", "Next.js", "Mantine UI", "Firebase"],
+  "features": [
+    {
+      "name": "Campaign List Filtering",
+      "description": "Filters campaigns by brand and quarter using client-side logic and Mantine Select components.",
+      "files": ["src/app/campaigns/page.tsx", "src/constants/brands.ts"]
+    }
+  ]
+}

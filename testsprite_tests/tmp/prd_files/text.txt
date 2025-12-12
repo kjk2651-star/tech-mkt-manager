@@ -1,0 +1,5 @@
+Check that when only “ASUS MB” is selected, only posts related to ASUS MB remain.
+
+Then check that when “Q1” is additionally selected, only posts that match both conditions remain.
+
+Verify that when the “Reset Filters” button is clicked, the full list appears again.

@@ -1,0 +1,251 @@
+[
+  {
+    "id": "TC001",
+    "title": "Filter by single brand",
+    "description": "Verify that when a single brand filter is applied (e.g., 'ASUS MB'), only campaigns related to that brand are displayed in the campaign list.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the campaign list page."
+      },
+      {
+        "type": "action",
+        "description": "Open the brand filter dropdown using the Mantine Select component."
+      },
+      {
+        "type": "action",
+        "description": "Select the brand 'ASUS MB' from the brand filter dropdown."
+      },
+      {
+        "type": "assertion",
+        "description": "Check that the campaign list updates to show only campaigns matching the 'ASUS MB' brand."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that no campaigns from other brands are displayed."
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Filter by single quarter",
+    "description": "Verify that selecting a single quarter filter (e.g., 'Q1') filters the campaign list to show only campaigns from that quarter.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the campaign list page."
+      },
+      {
+        "type": "action",
+        "description": "Open the quarter filter dropdown using the Mantine Select component."
+      },
+      {
+        "type": "action",
+        "description": "Select the quarter 'Q1' from the quarter filter dropdown."
+      },
+      {
+        "type": "assertion",
+        "description": "Check that the campaign list updates to show only campaigns from 'Q1'."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that no campaigns from other quarters are displayed."
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Filter by brand and quarter simultaneously",
+    "description": "Verify that when both brand (e.g., 'ASUS MB') and quarter ('Q1') filters are applied, the campaign list only shows campaigns that match both criteria.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the campaign list page."
+      },
+      {
+        "type": "action",
+        "description": "Select 'ASUS MB' from the brand filter dropdown."
+      },
+      {
+        "type": "action",
+        "description": "Select 'Q1' from the quarter filter dropdown."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that the campaign list displays only campaigns that match brand 'ASUS MB' and quarter 'Q1'."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that no campaigns outside the selected brand or quarter are shown."
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Reset filters button functionality",
+    "description": "Verify that clicking the 'Reset Filters' button clears all selected filters and reloads the full campaign list showing all campaigns.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the campaign list page."
+      },
+      {
+        "type": "action",
+        "description": "Apply multiple filters: select 'ASUS MB' for brand and 'Q1' for quarter."
+      },
+      {
+        "type": "action",
+        "description": "Click the 'Reset Filters' button."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that all filter selections are cleared."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that the full campaign list reloads and displays all campaigns irrespective of brand or quarter."
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Filter UI responsiveness on various screen sizes",
+    "description": "Verify that the filter components and campaign list remain user-friendly and fully functional on different screen sizes (desktop, tablet, mobile).",
+    "category": "ui",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open the campaign list page on a desktop screen."
+      },
+      {
+        "type": "assertion",
+        "description": "Check that Mantine Select components for filtering are displayed properly and are usable."
+      },
+      {
+        "type": "action",
+        "description": "Resize the viewport to tablet screen dimensions."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the filters maintain visibility and usability without UI breaking."
+      },
+      {
+        "type": "action",
+        "description": "Resize the viewport to mobile screen dimensions."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the filters and campaign list layout remains user-friendly and functional."
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Filter with no matching campaigns",
+    "description": "Verify behavior when filters are selected that yield no matching campaigns, ensuring the UI displays an appropriate message or empty state.",
+    "category": "error handling",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the campaign list page."
+      },
+      {
+        "type": "action",
+        "description": "Select a brand and quarter combination for which no campaigns exist."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that the campaign list shows an empty state or message indicating no campaigns match the selected filters."
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Filter input persistence during navigation",
+    "description": "Verify that selected filters persist on client side while navigating within the campaign page or returning from details pages, ensuring user selections are retained.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to campaign list page."
+      },
+      {
+        "type": "action",
+        "description": "Select a brand and quarter filter."
+      },
+      {
+        "type": "action",
+        "description": "Navigate to a campaign details page and then return to the campaign list."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the previously selected filters are retained and the filtered campaign list is still displayed."
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Filter components accessibility verification",
+    "description": "Verify that filter components (Mantine Selects and Reset button) comply with accessibility standards (keyboard navigability, ARIA attributes).",
+    "category": "security",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the campaign list page."
+      },
+      {
+        "type": "action",
+        "description": "Navigate through filter controls using keyboard only."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that all filter controls receive focus and can be operated by keyboard."
+      },
+      {
+        "type": "assertion",
+        "description": "Validate that ARIA labels and roles are correctly set for screen readers."
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Performance test filtering with large dataset",
+    "description": "Verify that filtering operations execute efficiently and the UI remains responsive when the campaign list contains a large number of posts.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Seed the Firebase database with a large volume of campaign posts with diverse brand and quarter attributes."
+      },
+      {
+        "type": "action",
+        "description": "Navigate to the campaign list page."
+      },
+      {
+        "type": "action",
+        "description": "Apply brand and quarter filters."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that filter results appear within acceptable response time (e.g. under 2 seconds)."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that the UI does not freeze or become unresponsive during filter operations."
+      }
+    ]
+  }
+]

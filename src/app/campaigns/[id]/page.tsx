@@ -38,6 +38,11 @@ export default function CampaignDetailPage() {
     const [closedAmountUsd, setClosedAmountUsd] = useState<number | string>(0);
     const [exchangeRate, setExchangeRate] = useState<number | string>(1400);
 
+    // Final Vendor Closing Amount (Invoice)
+    const [finalVendorAmountUsd, setFinalVendorAmountUsd] = useState<number | string>(0);
+    const [finalVendorExchangeRate, setFinalVendorExchangeRate] = useState<number | string>(1400);
+    const [finalVendorAmountKrw, setFinalVendorAmountKrw] = useState<number | string>(0);
+
     // Execution Form State
     const [editingExecution, setEditingExecution] = useState<Execution | null>(null);
     const [execForm, setExecForm] = useState<Partial<Execution>>({});
@@ -67,6 +72,10 @@ export default function CampaignDetailPage() {
                     setClosedAmount(data.closedAmount || 0);
                     setClosedAmountUsd(data.closedAmountUsd || 0);
                     setExchangeRate(data.appliedExchangeRate || 1400);
+
+                    setFinalVendorAmountUsd(data.finalVendorAmountUsd || 0);
+                    setFinalVendorExchangeRate(data.finalVendorExchangeRate || 1400);
+                    setFinalVendorAmountKrw(data.finalVendorAmountKrw || 0);
                 } else {
                     console.log("No such document!");
                 }
@@ -83,11 +92,22 @@ export default function CampaignDetailPage() {
     const handleSaveRoot = async () => {
         if (!campaign || !id) return;
         setSaving(true);
+
+        let newStatus = status;
+        let autoClosed = false;
+
+        // Auto-Close Logic: If Final KRW or USD is entered (>0), force status to 'closed'
+        if ((Number(finalVendorAmountKrw) > 0 || Number(finalVendorAmountUsd) > 0) && status !== 'closed') {
+            newStatus = 'closed';
+            setStatus('closed');
+            autoClosed = true;
+        }
+
         try {
             const docRef = doc(db, 'campaigns', id);
             await updateDoc(docRef, {
                 vendorDescription,
-                status,
+                status: newStatus,
                 brand,
                 quarter,
                 year,
@@ -96,17 +116,29 @@ export default function CampaignDetailPage() {
                 description,
                 closedAmount: Number(closedAmount),
                 closedAmountUsd: Number(closedAmountUsd),
-                appliedExchangeRate: Number(exchangeRate)
+                appliedExchangeRate: Number(exchangeRate),
+                // New Fields
+                finalVendorAmountUsd: Number(finalVendorAmountUsd),
+                finalVendorExchangeRate: Number(finalVendorExchangeRate),
+                finalVendorAmountKrw: Number(finalVendorAmountKrw)
             });
 
             setCampaign(prev => prev ? ({
                 ...prev,
-                vendorDescription, status, brand, quarter, year, caseId, invoice, description,
+                vendorDescription, status: newStatus, brand, quarter, year, caseId, invoice, description,
                 closedAmount: Number(closedAmount),
                 closedAmountUsd: Number(closedAmountUsd),
-                appliedExchangeRate: Number(exchangeRate)
+                appliedExchangeRate: Number(exchangeRate),
+                finalVendorAmountUsd: Number(finalVendorAmountUsd),
+                finalVendorExchangeRate: Number(finalVendorExchangeRate),
+                finalVendorAmountKrw: Number(finalVendorAmountKrw)
             }) : null);
-            alert('기본 정보가 저장되었습니다.');
+
+            if (autoClosed) {
+                alert('최종 금액이 입력되어 상태가 \'정산 완료\'로 변경되었습니다.');
+            } else {
+                alert('기본 정보가 저장되었습니다.');
+            }
         } catch (error) {
             console.error("Error updating document:", error);
             alert('저장 중 오류가 발생했습니다.');
@@ -267,6 +299,11 @@ export default function CampaignDetailPage() {
                     <Badge size="xl" variant="light" color="blue">
                         Total: ₩{campaign.totalAmount?.toLocaleString() || 0}
                     </Badge>
+                    {campaign.finalVendorAmountKrw && campaign.finalVendorAmountKrw > 0 && (
+                        <Badge size="xl" variant="filled" color="green">
+                            (최종: ₩{campaign.finalVendorAmountKrw.toLocaleString()})
+                        </Badge>
+                    )}
                     <Select
                         data={[
                             { value: 'planned', label: '🟢 계획' },
@@ -397,6 +434,52 @@ export default function CampaignDetailPage() {
                                     onChange={(v) => {
                                         setClosedAmount(v);
                                         // Optional: Reverse calc USD? Let's keep one-way for simplicity unless requested
+                                    }}
+                                />
+                            </SimpleGrid>
+                        </Card>
+
+                        <Card withBorder radius="md" bg="green.0" mt="lg">
+                            <Text size="sm" fw={700} mb="xs" c="green.9">
+                                <IconCalculator size={14} style={{ marginRight: 5, verticalAlign: 'middle' }} />
+                                최종 Vendor Closing Amount (Invoice)
+                            </Text>
+                            <SimpleGrid cols={{ base: 1, sm: 3 }}>
+                                <NumberInput
+                                    label="Final Amount ($)"
+                                    placeholder="0"
+                                    thousandSeparator=","
+                                    prefix="$"
+                                    value={finalVendorAmountUsd}
+                                    onChange={(v) => {
+                                        setFinalVendorAmountUsd(v);
+                                        if (v && finalVendorExchangeRate) setFinalVendorAmountKrw(Math.round(Number(v) * Number(finalVendorExchangeRate)));
+                                    }}
+                                />
+                                <NumberInput
+                                    label="Exchange Rate (₩/$)"
+                                    placeholder="1400"
+                                    thousandSeparator=","
+                                    prefix="₩"
+                                    value={finalVendorExchangeRate}
+                                    onChange={(v) => {
+                                        setFinalVendorExchangeRate(v);
+                                        if (finalVendorAmountUsd && v) setFinalVendorAmountKrw(Math.round(Number(finalVendorAmountUsd) * Number(v)));
+                                        // Also update USD if KRW exists? Usually Rate change affects calculated value.
+                                        // If we follow 'USD * Rate = KRW' dominance:
+                                        if (finalVendorAmountUsd && v) setFinalVendorAmountKrw(Math.round(Number(finalVendorAmountUsd) * Number(v)));
+                                    }}
+                                />
+                                <NumberInput
+                                    label="Final Amount (₩)"
+                                    placeholder="0"
+                                    thousandSeparator=","
+                                    prefix="₩"
+                                    value={finalVendorAmountKrw}
+                                    onChange={(v) => {
+                                        setFinalVendorAmountKrw(v);
+                                        // Reverse calculation: KRW / Rate = USD
+                                        if (v && finalVendorExchangeRate) setFinalVendorAmountUsd(Number((Number(v) / Number(finalVendorExchangeRate)).toFixed(2)));
                                     }}
                                 />
                             </SimpleGrid>

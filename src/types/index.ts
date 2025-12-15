@@ -52,6 +52,11 @@ export interface Campaign {
     closedAmountUsd?: number;
     appliedExchangeRate?: number;
 
+    // Final Invoice Amounts
+    finalVendorAmountUsd?: number;
+    finalVendorExchangeRate?: number;
+    finalVendorAmountKrw?: number;
+
     // Legacy/Optional - kept but might be unused or re-purposed
     description?: string; // Vendor level note
     url?: string;

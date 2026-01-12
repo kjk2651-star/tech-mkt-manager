@@ -2,7 +2,7 @@
 
 import { AppShell, Burger, Group, NavLink, Text, Title } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconDashboard, IconCoin, IconSpeakerphone, IconRobot, IconActivity } from '@tabler/icons-react';
+import { IconDashboard, IconSpeakerphone, IconRobot, IconActivity } from '@tabler/icons-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -35,13 +35,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     leftSection={<IconDashboard size="1rem" stroke={1.5} />}
                     active={pathname === '/dashboard'}
                 />
-                <NavLink
-                    component={Link}
-                    href="/budget"
-                    label="예산 관리"
-                    leftSection={<IconCoin size="1rem" stroke={1.5} />}
-                    active={pathname === '/budget'}
-                />
+
                 <NavLink
                     component={Link}
                     href="/campaigns"

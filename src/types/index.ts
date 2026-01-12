@@ -45,6 +45,7 @@ export interface Campaign {
     // Vendor level meta
     caseId?: string;
     invoice?: string;
+    cnNumber?: string; // Credit Note Number
     createdAt?: any;
 
     // Financials (Vendor Closing)

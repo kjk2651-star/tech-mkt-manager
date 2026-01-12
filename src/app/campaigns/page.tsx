@@ -1,8 +1,8 @@
 'use client';
 
 import { AppLayout } from '@/components/Layout/AppLayout';
-import { Title, Card, Table, Button, Group, Badge, Text, ActionIcon, LoadingOverlay, Select, Tooltip } from '@mantine/core';
-import { IconPlus, IconEdit, IconTrash } from '@tabler/icons-react';
+import { Title, Card, Table, Button, Group, Badge, Text, ActionIcon, LoadingOverlay, Select, Tooltip, Tabs } from '@mantine/core';
+import { IconPlus, IconEdit, IconTrash, IconArrowsSort, IconArrowUp, IconArrowDown } from '@tabler/icons-react';
 import { Campaign } from '@/types';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
@@ -14,8 +14,12 @@ export default function CampaignsPage() {
     const router = useRouter();
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<string | null>('asus');
     const [selectedQuarter, setSelectedQuarter] = useState<string | null>(null);
+
+    // Sorting State
+    const [sortBy, setSortBy] = useState<string | null>(null);
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
     useEffect(() => {
         const q = query(collection(db, 'campaigns'), orderBy('createdAt', 'desc'));
@@ -31,35 +35,78 @@ export default function CampaignsPage() {
         return () => unsubscribe();
     }, []);
 
-    const filteredCampaigns = campaigns.filter(campaign => {
-        const matchBrand = !selectedBrand || campaign.brand === selectedBrand;
-        const matchQuarter = !selectedQuarter || campaign.quarter === selectedQuarter;
-        return matchBrand && matchQuarter;
-    });
-
-    const summaryData = useMemo(() => {
-        const grouped: Record<string, { brand: string, quarter: string, receivable: number, executed: number }> = {};
-
-        filteredCampaigns.forEach(c => {
-            const key = `${c.brand}-${c.quarter}`;
-            if (!grouped[key]) {
-                grouped[key] = { brand: c.brand, quarter: c.quarter, receivable: 0, executed: 0 };
+    // 1. Filter by Tab & Quarter
+    const filteredCampaigns = useMemo(() => {
+        return campaigns.filter(campaign => {
+            let matchBrand = false;
+            if (activeTab === 'asus') {
+                matchBrand = campaign.brand === 'ASUS MB' || campaign.brand === 'ASUS VGA' || campaign.brand === 'ASUS LCD';
+            } else if (activeTab === 'manli') {
+                matchBrand = campaign.brand === 'MANLI';
+            } else if (activeTab === 'intel') {
+                matchBrand = campaign.brand === 'INTEL';
+            } else if (activeTab === 'asrock') {
+                matchBrand = campaign.brand === 'ASRock';
+            } else if (activeTab === 'power') {
+                matchBrand = campaign.brand === 'POWER';
+            } else {
+                matchBrand = true; // Should not happen if tabs are strict, but failsafe
             }
 
-            const receivableRate = c.brand === 'ASUS MB' ? 0.5 : 1;
-            const receivable = Math.round((c.closedAmount || 0) * receivableRate);
-
-            grouped[key].receivable += receivable;
-            grouped[key].executed += (c.totalAmount || 0);
+            const matchQuarter = !selectedQuarter || campaign.quarter === selectedQuarter;
+            return matchBrand && matchQuarter;
         });
+    }, [campaigns, activeTab, selectedQuarter]);
 
-        return Object.values(grouped).sort((a, b) => {
-            if (a.brand !== b.brand) return a.brand.localeCompare(b.brand);
-            return a.quarter.localeCompare(b.quarter);
+    // 2. Sort Logic
+    const sortedCampaigns = useMemo(() => {
+        if (!sortBy) return filteredCampaigns;
+
+        return [...filteredCampaigns].sort((a, b) => {
+            let valueA: any = a[sortBy as keyof Campaign];
+            let valueB: any = b[sortBy as keyof Campaign];
+
+            // Handle special cases or defaults
+            if (sortBy === 'vendorDescription') {
+                valueA = (valueA || '').toLowerCase();
+                valueB = (valueB || '').toLowerCase();
+            } else if (sortBy === 'totalAmount') {
+                valueA = valueA || 0;
+                valueB = valueB || 0;
+            } else if (sortBy === 'status') {
+                valueA = (valueA || '').toLowerCase();
+                valueB = (valueB || '').toLowerCase();
+            }
+
+            if (valueA < valueB) return sortDirection === 'asc' ? -1 : 1;
+            if (valueA > valueB) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
         });
-    }, [filteredCampaigns]);
+    }, [filteredCampaigns, sortBy, sortDirection]);
 
-    const rows = filteredCampaigns.map((campaign) => (
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(field);
+            setSortDirection('asc');
+        }
+    };
+
+    const SortIcon = ({ field }: { field: string }) => {
+        if (sortBy !== field) return <IconArrowsSort size={14} style={{ opacity: 0.3 }} />;
+        return sortDirection === 'asc' ? <IconArrowUp size={14} /> : <IconArrowDown size={14} />;
+    };
+
+    const resetData = async () => {
+        if (confirm('정말로 모든 캠페인 데이터를 삭제하시겠습니까? (복구 불가)')) {
+            const { resetCampaigns } = await import('@/lib/reset');
+            await resetCampaigns();
+            alert('데이터가 초기화되었습니다.');
+        }
+    };
+
+    const rows = sortedCampaigns.map((campaign) => (
         <Table.Tr
             key={campaign.id}
             onClick={() => router.push(`/campaigns/${campaign.id}`)}
@@ -70,6 +117,9 @@ export default function CampaignsPage() {
             </Table.Td>
             <Table.Td>{campaign.quarter}</Table.Td>
             <Table.Td fw={500}>{campaign.vendorDescription}</Table.Td>
+            <Table.Td>
+                {campaign.cnNumber && <Badge variant="outline" color="gray" size="sm">{campaign.cnNumber}</Badge>}
+            </Table.Td>
             <Table.Td style={{ textAlign: 'right' }}>₩{campaign.closedAmount?.toLocaleString() || 0}</Table.Td>
             <Table.Td style={{ textAlign: 'right' }}>
                 ₩{Math.round((campaign.closedAmount || 0) * (campaign.brand === 'ASUS MB' ? 0.5 : 1)).toLocaleString()}
@@ -110,20 +160,16 @@ export default function CampaignsPage() {
         <AppLayout>
             <Group justify="space-between" mb="lg">
                 <Title order={2}>캠페인 관리</Title>
-                <Button onClick={() => router.push('/campaigns/new')}>
-                    + 새 Vendor 건 등록
-                </Button>
+                <Group>
+                    <Button variant="subtle" color="red" size="xs" onClick={resetData}>데이터 초기화 (Debug)</Button>
+                    <Button onClick={() => router.push('/campaigns/new')}>
+                        + 새 Vendor 건 등록
+                    </Button>
+                </Group>
             </Group>
 
-            <Group mb="md">
-                <Select
-                    placeholder="브랜드 선택"
-                    data={BRANDS}
-                    value={selectedBrand}
-                    onChange={setSelectedBrand}
-                    clearable
-                    style={{ width: 200 }}
-                />
+            {/* Quarter Filter (Global) */}
+            <Group mb="md" justify="flex-end">
                 <Select
                     placeholder="분기 선택"
                     data={['Q1', 'Q2', 'Q3', 'Q4']}
@@ -132,69 +178,17 @@ export default function CampaignsPage() {
                     clearable
                     style={{ width: 150 }}
                 />
-                <Button
-                    variant="subtle"
-                    color="gray"
-                    onClick={() => {
-                        setSelectedBrand(null);
-                        setSelectedQuarter(null);
-                    }}
-                >
-                    필터 초기화
-                </Button>
             </Group>
 
-            {/* Summary Table */}
-            {summaryData.length > 0 && (
-                <Card shadow="sm" padding="lg" radius="md" withBorder mb="lg" bg="gray.0">
-                    <Title order={5} mb="md">브랜드/분기별 집행 현황 (Summary)</Title>
-                    <Table verticalSpacing="xs" withTableBorder withColumnBorders bg="white">
-                        <Table.Thead>
-                            <Table.Tr bg="gray.1">
-                                <Table.Th>브랜드</Table.Th>
-                                <Table.Th>분기</Table.Th>
-                                <Table.Th style={{ textAlign: 'right' }}>받을 금액 (Receivable)</Table.Th>
-                                <Table.Th style={{ textAlign: 'right' }}>집행 금액 (Executed)</Table.Th>
-                                <Table.Th style={{ textAlign: 'right' }}>남은 금액 (Remaining)</Table.Th>
-                            </Table.Tr>
-                        </Table.Thead>
-                        <Table.Tbody>
-                            {summaryData.map((item) => {
-                                const remaining = item.receivable - item.executed;
-                                return (
-                                    <Table.Tr key={`${item.brand}-${item.quarter}`}>
-                                        <Table.Td fw={600}>{item.brand}</Table.Td>
-                                        <Table.Td>{item.quarter}</Table.Td>
-                                        <Table.Td style={{ textAlign: 'right' }}>₩{item.receivable.toLocaleString()}</Table.Td>
-                                        <Table.Td style={{ textAlign: 'right' }}>₩{item.executed.toLocaleString()}</Table.Td>
-                                        <Table.Td style={{ textAlign: 'right' }}>
-                                            <Text fw={700} c={remaining < 0 ? 'red' : 'teal'}>
-                                                ₩{remaining.toLocaleString()}
-                                            </Text>
-                                        </Table.Td>
-                                    </Table.Tr>
-                                );
-                            })}
-
-                            {/* Grand Total Row */}
-                            <Table.Tr bg="gray.1" style={{ borderTop: '2px solid #dee2e6' }}>
-                                <Table.Td fw={700} colSpan={2} style={{ textAlign: 'center' }}>전체 합계 (Total)</Table.Td>
-                                <Table.Td fw={700} style={{ textAlign: 'right' }}>
-                                    ₩{summaryData.reduce((acc, curr) => acc + curr.receivable, 0).toLocaleString()}
-                                </Table.Td>
-                                <Table.Td fw={700} style={{ textAlign: 'right' }}>
-                                    ₩{summaryData.reduce((acc, curr) => acc + curr.executed, 0).toLocaleString()}
-                                </Table.Td>
-                                <Table.Td fw={700} style={{ textAlign: 'right' }}>
-                                    <Text fw={700} c={summaryData.reduce((acc, curr) => acc + (curr.receivable - curr.executed), 0) < 0 ? 'red' : 'teal'}>
-                                        ₩{summaryData.reduce((acc, curr) => acc + (curr.receivable - curr.executed), 0).toLocaleString()}
-                                    </Text>
-                                </Table.Td>
-                            </Table.Tr>
-                        </Table.Tbody>
-                    </Table>
-                </Card>
-            )}
+            <Tabs value={activeTab} onChange={setActiveTab} mb="lg">
+                <Tabs.List>
+                    <Tabs.Tab value="asus">ASUS</Tabs.Tab>
+                    <Tabs.Tab value="manli">Manli</Tabs.Tab>
+                    <Tabs.Tab value="intel">INTEL</Tabs.Tab>
+                    <Tabs.Tab value="asrock">ASRock</Tabs.Tab>
+                    <Tabs.Tab value="power">POWER</Tabs.Tab>
+                </Tabs.List>
+            </Tabs>
 
             <Card shadow="sm" padding="lg" radius="md" withBorder pos="relative">
                 <LoadingOverlay visible={loading} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
@@ -203,19 +197,35 @@ export default function CampaignsPage() {
                         <Table.Tr>
                             <Table.Th>브랜드</Table.Th>
                             <Table.Th>분기</Table.Th>
-                            <Table.Th>Vendor Description</Table.Th>
+                            <Table.Th style={{ cursor: 'pointer' }} onClick={() => handleSort('vendorDescription')}>
+                                <Group gap="xs">
+                                    Vendor Description
+                                    <SortIcon field="vendorDescription" />
+                                </Group>
+                            </Table.Th>
+                            <Table.Th>CN#</Table.Th>
                             <Table.Th style={{ textAlign: 'right' }}>클로징 제출 금액</Table.Th>
                             <Table.Th style={{ textAlign: 'right' }}>받을 금액</Table.Th>
-                            <Table.Th style={{ textAlign: 'right' }}>총 집행금액</Table.Th>
+                            <Table.Th style={{ textAlign: 'right', cursor: 'pointer' }} onClick={() => handleSort('totalAmount')}>
+                                <Group gap="xs" justify="flex-end">
+                                    총 집행금액
+                                    <SortIcon field="totalAmount" />
+                                </Group>
+                            </Table.Th>
                             <Table.Th style={{ textAlign: 'right' }}>잔액 (Balance)</Table.Th>
-                            <Table.Th>상태</Table.Th>
+                            <Table.Th style={{ cursor: 'pointer' }} onClick={() => handleSort('status')}>
+                                <Group gap="xs">
+                                    상태
+                                    <SortIcon field="status" />
+                                </Group>
+                            </Table.Th>
                             <Table.Th style={{ textAlign: 'right' }}>관리</Table.Th>
                         </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                        {campaigns.length === 0 && !loading ? (
+                        {sortedCampaigns.length === 0 && !loading ? (
                             <Table.Tr>
-                                <Table.Td colSpan={9} align="center">등록된 캠페인이 없습니다.</Table.Td>
+                                <Table.Td colSpan={10} align="center">등록된 캠페인이 없습니다.</Table.Td>
                             </Table.Tr>
                         ) : rows}
                     </Table.Tbody>

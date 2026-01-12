@@ -24,6 +24,7 @@ export function CampaignForm({ initialData }: CampaignFormProps) {
 
     const [caseId, setCaseId] = useState(initialData?.caseId || '');
     const [invoice, setInvoice] = useState(initialData?.invoice || '');
+    const [cnNumber, setCnNumber] = useState(initialData?.cnNumber || '');
     const [status, setStatus] = useState<string>(initialData?.status || 'planned');
     const [description, setDescription] = useState(initialData?.description || '');
 
@@ -68,6 +69,7 @@ export function CampaignForm({ initialData }: CampaignFormProps) {
                 vendorDescription,
                 caseId,
                 invoice,
+                cnNumber,
                 status,
                 description,
 
@@ -191,6 +193,12 @@ export function CampaignForm({ initialData }: CampaignFormProps) {
                         placeholder="INV-XXXX"
                         value={invoice}
                         onChange={(e) => setInvoice(e.currentTarget.value)}
+                    />
+                    <TextInput
+                        label="CN#"
+                        placeholder="Credit Note 번호 입력"
+                        value={cnNumber}
+                        onChange={(e) => setCnNumber(e.currentTarget.value)}
                     />
                 </SimpleGrid>
 

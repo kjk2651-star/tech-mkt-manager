@@ -29,7 +29,8 @@ export default function ActivityDetailPage() {
             description: '',
             product: '',
             cost: 0,
-            isVendorSupported: false,
+            planCost: 0,
+            internalDraftId: '',
             status: '준비',
             impressions: 0,
             clicks: 0,
@@ -58,7 +59,8 @@ export default function ActivityDetailPage() {
                         description: data.description,
                         product: data.product,
                         cost: data.cost,
-                        isVendorSupported: data.isVendorSupported,
+                        planCost: data.planCost || 0,
+                        internalDraftId: data.internalDraftId || '',
                         status: data.status,
                         impressions: data.impressions || 0,
                         clicks: data.clicks || 0,
@@ -188,9 +190,25 @@ export default function ActivityDetailPage() {
                                 </Grid.Col>
 
                                 <Grid.Col span={4}>
+                                    <TextInput
+                                        label="내부 기안 번호"
+                                        placeholder="예: D-202X-XXX"
+                                        {...form.getInputProps('internalDraftId')}
+                                    />
+                                </Grid.Col>
+
+                                <Grid.Col span={4}>
                                     <NumberInput
-                                        label="소요 비용 (Cost)"
-                                        description="단순 기록용 (예산 차감 안됨)"
+                                        label="예산 (Plan Budget)"
+                                        thousandSeparator=","
+                                        leftSection="₩"
+                                        {...form.getInputProps('planCost')}
+                                    />
+                                </Grid.Col>
+                                <Grid.Col span={4}>
+                                    <NumberInput
+                                        label="실 집행 금액 (Actual Cost)"
+                                        description="실제 집행된 금액"
                                         thousandSeparator=","
                                         leftSection="₩"
                                         {...form.getInputProps('cost')}
@@ -201,12 +219,6 @@ export default function ActivityDetailPage() {
                                         label="진행 상태"
                                         data={['준비', '진행중', '완료']}
                                         {...form.getInputProps('status')}
-                                    />
-                                </Grid.Col>
-                                <Grid.Col span={4} style={{ display: 'flex', alignItems: 'center', paddingTop: 24 }}>
-                                    <Switch
-                                        label="Vendor 지원 여부"
-                                        {...form.getInputProps('isVendorSupported', { type: 'checkbox' })}
                                     />
                                 </Grid.Col>
                             </Grid>

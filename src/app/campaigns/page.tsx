@@ -7,23 +7,27 @@ import { Campaign } from '@/types';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { BRANDS } from '@/constants/brands';
+import { MarketingActivity } from '@/types'; // Import MarketingActivity
+import { FundingSummary } from '@/components/Campaign/FundingSummary'; // Import FundingSummary
 
 export default function CampaignsPage() {
     const router = useRouter();
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+    const [activities, setActivities] = useState<MarketingActivity[]>([]); // New State
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<string | null>('asus');
+    const [activeTab, setActiveTab] = useState<string | null>('asus_vga');
     const [selectedQuarter, setSelectedQuarter] = useState<string | null>(null);
+    const [selectedYear, setSelectedYear] = useState<string | null>(new Date().getFullYear().toString()); // Year Filter
 
     // Sorting State
     const [sortBy, setSortBy] = useState<string | null>(null);
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
     useEffect(() => {
-        const q = query(collection(db, 'campaigns'), orderBy('createdAt', 'desc'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
+        const q1 = query(collection(db, 'campaigns'), orderBy('createdAt', 'desc'));
+        const unsubscribe1 = onSnapshot(q1, (snapshot) => {
             const campaignsData = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
@@ -32,15 +36,31 @@ export default function CampaignsPage() {
             setLoading(false);
         });
 
-        return () => unsubscribe();
+        const q2 = query(collection(db, 'marketing_activities'), orderBy('createdAt', 'desc'));
+        const unsubscribe2 = onSnapshot(q2, (snapshot) => {
+            const data = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            })) as MarketingActivity[];
+            setActivities(data);
+        });
+
+        return () => {
+            unsubscribe1();
+            unsubscribe2();
+        };
     }, []);
 
     // 1. Filter by Tab & Quarter
     const filteredCampaigns = useMemo(() => {
         return campaigns.filter(campaign => {
             let matchBrand = false;
-            if (activeTab === 'asus') {
-                matchBrand = campaign.brand === 'ASUS MB' || campaign.brand === 'ASUS VGA' || campaign.brand === 'ASUS LCD';
+            if (activeTab === 'asus_vga') {
+                matchBrand = campaign.brand === 'ASUS VGA';
+            } else if (activeTab === 'asus_mb') {
+                matchBrand = campaign.brand === 'ASUS MB';
+            } else if (activeTab === 'asus_lcd') {
+                matchBrand = campaign.brand === 'ASUS LCD';
             } else if (activeTab === 'manli') {
                 matchBrand = campaign.brand === 'MANLI';
             } else if (activeTab === 'intel') {
@@ -49,14 +69,50 @@ export default function CampaignsPage() {
                 matchBrand = campaign.brand === 'ASRock';
             } else if (activeTab === 'power') {
                 matchBrand = campaign.brand === 'POWER';
+            } else if (activeTab === 'ipc') {
+                matchBrand = campaign.brand === 'iPC';
+            } else if (activeTab === 'others') {
+                matchBrand = campaign.brand === 'others';
             } else {
-                matchBrand = true; // Should not happen if tabs are strict, but failsafe
+                matchBrand = true;
             }
 
             const matchQuarter = !selectedQuarter || campaign.quarter === selectedQuarter;
-            return matchBrand && matchQuarter;
+            const matchYear = !selectedYear || selectedYear === 'all' || campaign.year === parseInt(selectedYear);
+            return matchBrand && matchQuarter && matchYear;
         });
-    }, [campaigns, activeTab, selectedQuarter]);
+    }, [campaigns, activeTab, selectedQuarter, selectedYear]);
+
+    const filteredActivities = useMemo(() => {
+        return activities.filter(activity => {
+            let matchBrand = false;
+            if (activeTab === 'asus_vga') {
+                matchBrand = activity.brand === 'ASUS VGA';
+            } else if (activeTab === 'asus_mb') {
+                matchBrand = activity.brand === 'ASUS MB';
+            } else if (activeTab === 'asus_lcd') {
+                matchBrand = activity.brand === 'ASUS LCD';
+            } else if (activeTab === 'manli') {
+                matchBrand = activity.brand === 'MANLI';
+            } else if (activeTab === 'intel') {
+                matchBrand = activity.brand === 'INTEL';
+            } else if (activeTab === 'asrock') {
+                matchBrand = activity.brand === 'ASRock';
+            } else if (activeTab === 'power') {
+                matchBrand = activity.brand === 'POWER';
+            } else if (activeTab === 'ipc') {
+                matchBrand = activity.brand === 'iPC';
+            } else if (activeTab === 'others') {
+                matchBrand = activity.brand === 'others';
+            } else {
+                matchBrand = true;
+            }
+
+            const matchQuarter = !selectedQuarter || activity.quarter === selectedQuarter;
+            const matchYear = !selectedYear || selectedYear === 'all' || activity.year === parseInt(selectedYear);
+            return matchBrand && matchQuarter && matchYear;
+        });
+    }, [activities, activeTab, selectedQuarter, selectedYear]);
 
     // 2. Sort Logic
     const sortedCampaigns = useMemo(() => {
@@ -106,6 +162,19 @@ export default function CampaignsPage() {
         }
     };
 
+    const handleDelete = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!confirm('정말로 이 제조사 펀딩 내역을 삭제하시겠습니까?')) return;
+
+        try {
+            await deleteDoc(doc(db, 'campaigns', id));
+            // Snapshot listener will update the list automatically
+        } catch (error) {
+            console.error("Error deleting document:", error);
+            alert('삭제 중 오류가 발생했습니다.');
+        }
+    };
+
     const rows = sortedCampaigns.map((campaign) => (
         <Table.Tr
             key={campaign.id}
@@ -122,14 +191,9 @@ export default function CampaignsPage() {
             </Table.Td>
             <Table.Td style={{ textAlign: 'right' }}>₩{campaign.closedAmount?.toLocaleString() || 0}</Table.Td>
             <Table.Td style={{ textAlign: 'right' }}>
-                ₩{Math.round((campaign.closedAmount || 0) * (campaign.brand === 'ASUS MB' ? 0.5 : 1)).toLocaleString()}
+                ₩{(campaign.closedAmount || 0).toLocaleString()}
             </Table.Td>
-            <Table.Td style={{ textAlign: 'right' }}>₩{campaign.totalAmount?.toLocaleString() || 0}</Table.Td>
-            <Table.Td style={{ textAlign: 'right' }}>
-                <Text fw={700} c={Math.round((campaign.closedAmount || 0) * (campaign.brand === 'ASUS MB' ? 0.5 : 1)) - (campaign.totalAmount || 0) < 0 ? 'red' : 'teal'}>
-                    ₩{(Math.round((campaign.closedAmount || 0) * (campaign.brand === 'ASUS MB' ? 0.5 : 1)) - (campaign.totalAmount || 0)).toLocaleString()}
-                </Text>
-            </Table.Td>
+            {/* Removed Executed and Balance columns per request */}
             <Table.Td>
                 <Badge
                     color={
@@ -148,7 +212,7 @@ export default function CampaignsPage() {
             </Table.Td>
             <Table.Td>
                 <Group gap={0} justify="flex-end" onClick={(e) => e.stopPropagation()}>
-                    <ActionIcon variant="subtle" color="red">
+                    <ActionIcon variant="subtle" color="red" onClick={(e) => handleDelete(campaign.id, e)}>
                         <IconTrash size={16} />
                     </ActionIcon>
                 </Group>
@@ -159,7 +223,7 @@ export default function CampaignsPage() {
     return (
         <AppLayout>
             <Group justify="space-between" mb="lg">
-                <Title order={2}>캠페인 관리</Title>
+                <Title order={2}>제조사 펀딩 관리</Title>
                 <Group>
                     <Button variant="subtle" color="red" size="xs" onClick={resetData}>데이터 초기화 (Debug)</Button>
                     <Button onClick={() => router.push('/campaigns/new')}>
@@ -170,6 +234,19 @@ export default function CampaignsPage() {
 
             {/* Quarter Filter (Global) */}
             <Group mb="md" justify="flex-end">
+                <Select
+                    placeholder="년도"
+                    data={[
+                        { value: 'all', label: '전체 (Total)' },
+                        { value: '2024', label: '2024' },
+                        { value: '2025', label: '2025' },
+                        { value: '2026', label: '2026' }
+                    ]}
+                    value={selectedYear}
+                    onChange={setSelectedYear}
+                    style={{ width: 120 }}
+                    allowDeselect={false}
+                />
                 <Select
                     placeholder="분기 선택"
                     data={['Q1', 'Q2', 'Q3', 'Q4']}
@@ -182,13 +259,24 @@ export default function CampaignsPage() {
 
             <Tabs value={activeTab} onChange={setActiveTab} mb="lg">
                 <Tabs.List>
-                    <Tabs.Tab value="asus">ASUS</Tabs.Tab>
+                    <Tabs.Tab value="asus_vga">ASUS VGA</Tabs.Tab>
+                    <Tabs.Tab value="asus_mb">ASUS MB</Tabs.Tab>
+                    <Tabs.Tab value="asus_lcd">ASUS LCD</Tabs.Tab>
                     <Tabs.Tab value="manli">Manli</Tabs.Tab>
                     <Tabs.Tab value="intel">INTEL</Tabs.Tab>
                     <Tabs.Tab value="asrock">ASRock</Tabs.Tab>
                     <Tabs.Tab value="power">POWER</Tabs.Tab>
+                    <Tabs.Tab value="ipc">iPC</Tabs.Tab>
+                    <Tabs.Tab value="others">others</Tabs.Tab>
                 </Tabs.List>
             </Tabs>
+
+            <FundingSummary
+                campaigns={filteredCampaigns}
+                activities={filteredActivities}
+                brand={activeTab}
+                quarter={selectedQuarter}
+            />
 
             <Card shadow="sm" padding="lg" radius="md" withBorder pos="relative">
                 <LoadingOverlay visible={loading} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
@@ -205,14 +293,8 @@ export default function CampaignsPage() {
                             </Table.Th>
                             <Table.Th>CN#</Table.Th>
                             <Table.Th style={{ textAlign: 'right' }}>클로징 제출 금액</Table.Th>
-                            <Table.Th style={{ textAlign: 'right' }}>받을 금액</Table.Th>
-                            <Table.Th style={{ textAlign: 'right', cursor: 'pointer' }} onClick={() => handleSort('totalAmount')}>
-                                <Group gap="xs" justify="flex-end">
-                                    총 집행금액
-                                    <SortIcon field="totalAmount" />
-                                </Group>
-                            </Table.Th>
-                            <Table.Th style={{ textAlign: 'right' }}>잔액 (Balance)</Table.Th>
+                            <Table.Th style={{ textAlign: 'right' }}>받을 금액 (Confirmed)</Table.Th>
+                            {/* Removed totalAmount and Balance headers */}
                             <Table.Th style={{ cursor: 'pointer' }} onClick={() => handleSort('status')}>
                                 <Group gap="xs">
                                     상태

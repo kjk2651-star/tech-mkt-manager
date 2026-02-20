@@ -80,8 +80,9 @@ export interface MarketingActivity {
     place: string;       // 진행 장소/채널
     description: string; // 활동 명/내용
     product: string;     // 타겟 제품
-    cost: number;        // 소요 비용 (예산 미반영)
-    isVendorSupported: boolean; // 벤더 지원 유무
+    cost: number;        // 실제 집행 금액 (Actual Cost) - Was 'cost'
+    planCost?: number;   // 예산 (Plan Budget)
+    internalDraftId?: string; // 내부 기안 번호
     status: '준비' | '진행중' | '완료'; // 진행 상태
 
     // KPIs

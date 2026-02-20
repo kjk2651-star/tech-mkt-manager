@@ -28,7 +28,7 @@ export default function CampaignDetailPage() {
     const [status, setStatus] = useState<'planned' | 'executing' | 'executed' | 'closed'>('planned');
     const [brand, setBrand] = useState('');
     const [quarter, setQuarter] = useState('');
-    const [year, setYear] = useState(2025);
+    const [year, setYear] = useState(new Date().getFullYear());
     const [caseId, setCaseId] = useState('');
     const [invoice, setInvoice] = useState('');
     const [description, setDescription] = useState('');
@@ -159,108 +159,8 @@ export default function CampaignDetailPage() {
         }
     };
 
-    // --- Execution Management ---
-
-    const handleOpenAddExecution = () => {
-        setEditingExecution(null);
-        setExecForm({
-            internalTitle: '',
-            draftId: '',
-            planAmount: 0,
-            actualAmount: 0,
-            budgetSource: 'MDF',
-            note: ''
-        });
-        openExecutionModal();
-    };
-
-    const handleOpenEditExecution = (exec: Execution) => {
-        setEditingExecution(exec);
-        setExecForm({ ...exec });
-        openExecutionModal();
-    };
-
-    const handleSaveExecution = async () => {
-        if (!campaign || !id) return;
-
-        // Validation
-        if (!execForm.internalTitle) {
-            alert('내부 플랜명은 필수입니다.');
-            return;
-        }
-
-        const newExecutions = [...(campaign.executions || [])];
-
-        if (editingExecution) {
-            // Edit existing
-            const index = newExecutions.findIndex(e => e.id === editingExecution.id);
-            if (index !== -1) {
-                newExecutions[index] = {
-                    ...editingExecution,
-                    ...execForm,
-                    planAmount: Number(execForm.planAmount),
-                    actualAmount: Number(execForm.actualAmount)
-                } as Execution;
-            }
-        } else {
-            // Add new
-            const newExecution: Execution = {
-                id: crypto.randomUUID(),
-                createdAt: new Date(),
-                internalTitle: execForm.internalTitle || '',
-                draftId: execForm.draftId || '',
-                planAmount: Number(execForm.planAmount) || 0,
-                actualAmount: Number(execForm.actualAmount) || 0,
-                budgetSource: execForm.budgetSource || 'MDF',
-                note: execForm.note || ''
-            };
-            newExecutions.push(newExecution);
-        }
-
-        // Calculate Total Amount
-        const newTotalAmount = newExecutions.reduce((sum, exec) => sum + (exec.actualAmount || 0), 0);
-
-        setSaving(true);
-        try {
-            const docRef = doc(db, 'campaigns', id);
-            await updateDoc(docRef, {
-                executions: newExecutions,
-                totalAmount: newTotalAmount
-            });
-
-            setCampaign(prev => prev ? ({ ...prev, executions: newExecutions, totalAmount: newTotalAmount }) : null);
-            closeExecutionModal();
-        } catch (error) {
-            console.error("Error saving execution:", error);
-            alert('저장 중 오류가 발생했습니다.');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const handleDeleteExecution = async (execId: string) => {
-        if (!confirm('이 집행 내역을 삭제하시겠습니까?')) return;
-        if (!campaign || !id) return;
-
-        const newExecutions = (campaign.executions || []).filter(e => e.id !== execId);
-        const newTotalAmount = newExecutions.reduce((sum, exec) => sum + (exec.actualAmount || 0), 0);
-
-        setSaving(true);
-        try {
-            const docRef = doc(db, 'campaigns', id);
-            await updateDoc(docRef, {
-                executions: newExecutions,
-                totalAmount: newTotalAmount
-            });
-
-            setCampaign(prev => prev ? ({ ...prev, executions: newExecutions, totalAmount: newTotalAmount }) : null);
-        } catch (error) {
-            console.error("Error deleting execution:", error);
-            alert('삭제 중 오류가 발생했습니다.');
-        } finally {
-            setSaving(false);
-        }
-    };
+    // --- Execution Management Removed ---
+    // (Old execution logic removed)
 
     // --- Image Preview ---
     const handleImageClick = (src: string) => {
@@ -325,65 +225,13 @@ export default function CampaignDetailPage() {
                 </Group>
             </Group>
 
-            <Tabs defaultValue="executions">
+            <Tabs defaultValue="info">
                 <Tabs.List mb="md">
-                    <Tabs.Tab value="executions" leftSection={<IconCalculator size={16} />}>집행 내역 관리 (Executions)</Tabs.Tab>
                     <Tabs.Tab value="info" leftSection={<IconFile size={16} />}>기본 정보</Tabs.Tab>
                     <Tabs.Tab value="images" leftSection={<IconPhoto size={16} />}>이미지 / 증빙</Tabs.Tab>
                 </Tabs.List>
 
-                <Tabs.Panel value="executions">
-                    <Card withBorder shadow="sm" radius="md" p="md">
-                        <Group justify="space-between" mb="md">
-                            <Title order={4}>내부 집행 내역 ({campaign.executions?.length || 0}건)</Title>
-                            <Button leftSection={<IconPlus size={16} />} onClick={handleOpenAddExecution} variant="light">
-                                집행 내역 추가
-                            </Button>
-                        </Group>
 
-                        <Table striped highlightOnHover withTableBorder>
-                            <Table.Thead>
-                                <Table.Tr>
-                                    <Table.Th>내부 플랜명</Table.Th>
-                                    <Table.Th>기안 번호</Table.Th>
-                                    <Table.Th>예산 출처</Table.Th>
-                                    <Table.Th style={{ textAlign: 'right' }}>예상 금액</Table.Th>
-                                    <Table.Th style={{ textAlign: 'right' }}>실 집행 금액</Table.Th>
-                                    <Table.Th>관리</Table.Th>
-                                </Table.Tr>
-                            </Table.Thead>
-                            <Table.Tbody>
-                                {campaign.executions && campaign.executions.length > 0 ? (
-                                    campaign.executions.map((exec) => (
-                                        <Table.Tr key={exec.id}>
-                                            <Table.Td fw={500}>{exec.internalTitle}</Table.Td>
-                                            <Table.Td>{exec.draftId || '-'}</Table.Td>
-                                            <Table.Td><Badge color="gray" variant="outline">{exec.budgetSource}</Badge></Table.Td>
-                                            <Table.Td style={{ textAlign: 'right' }} c="dimmed">₩{exec.planAmount?.toLocaleString()}</Table.Td>
-                                            <Table.Td style={{ textAlign: 'right' }} fw={700}>₩{exec.actualAmount?.toLocaleString()}</Table.Td>
-                                            <Table.Td>
-                                                <Group gap="xs">
-                                                    <ActionIcon variant="subtle" color="blue" onClick={() => handleOpenEditExecution(exec)}>
-                                                        <IconEdit size={16} />
-                                                    </ActionIcon>
-                                                    <ActionIcon variant="subtle" color="red" onClick={() => handleDeleteExecution(exec.id)}>
-                                                        <IconTrash size={16} />
-                                                    </ActionIcon>
-                                                </Group>
-                                            </Table.Td>
-                                        </Table.Tr>
-                                    ))
-                                ) : (
-                                    <Table.Tr>
-                                        <Table.Td colSpan={6} style={{ textAlign: 'center', padding: '20px' }} c="dimmed">
-                                            등록된 집행 내역이 없습니다.
-                                        </Table.Td>
-                                    </Table.Tr>
-                                )}
-                            </Table.Tbody>
-                        </Table>
-                    </Card>
-                </Tabs.Panel>
 
                 <Tabs.Panel value="info">
                     <Card withBorder shadow="sm" radius="md" p="lg">
@@ -497,54 +345,7 @@ export default function CampaignDetailPage() {
                 </Tabs.Panel>
             </Tabs>
 
-            {/* Execution Modal */}
-            <Modal opened={executionModalOpened} onClose={closeExecutionModal} title={editingExecution ? "집행 내역 수정" : "새 집행 내역 추가"} centered>
-                <Stack>
-                    <TextInput
-                        label="내부 플랜명"
-                        placeholder="예: 인텔 번들 프로모션"
-                        required
-                        value={execForm.internalTitle || ''}
-                        onChange={(e) => setExecForm({ ...execForm, internalTitle: e.currentTarget.value })}
-                        data-autofocus
-                    />
-                    <TextInput
-                        label="기안 번호"
-                        placeholder="D-202X-XXX"
-                        value={execForm.draftId || ''}
-                        onChange={(e) => setExecForm({ ...execForm, draftId: e.currentTarget.value })}
-                    />
-                    <Select
-                        label="예산 출처"
-                        data={['MDF', 'MPOR', 'Rebate', 'Extra', 'Direct']}
-                        value={execForm.budgetSource}
-                        onChange={(v) => setExecForm({ ...execForm, budgetSource: v || 'MDF' })}
-                    />
-                    <NumberInput
-                        label="예상 금액 (Plan)"
-                        prefix="₩"
-                        thousandSeparator=","
-                        value={execForm.planAmount}
-                        onChange={(v) => setExecForm({ ...execForm, planAmount: Number(v) })}
-                    />
-                    <NumberInput
-                        label="실 집행 금액 (Actual)"
-                        prefix="₩"
-                        thousandSeparator=","
-                        value={execForm.actualAmount}
-                        onChange={(v) => setExecForm({ ...execForm, actualAmount: Number(v) })}
-                    />
-                    <Textarea
-                        label="비고 / 노트"
-                        value={execForm.note || ''}
-                        onChange={(e) => setExecForm({ ...execForm, note: e.currentTarget.value })}
-                    />
-                    <Group justify="flex-end" mt="md">
-                        <Button variant="default" onClick={closeExecutionModal}>취소</Button>
-                        <Button onClick={handleSaveExecution}>{editingExecution ? '수정' : '추가'}</Button>
-                    </Group>
-                </Stack>
-            </Modal>
+            {/* Execution Modal Removed */}
 
             {/* Image Preview Modal */}
             <Modal opened={imageModalOpened} onClose={closeImageModal} size="xl" centered withCloseButton={false}>

@@ -39,7 +39,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavLink
                     component={Link}
                     href="/campaigns"
-                    label="캠페인 관리"
+                    label="제조사 펀딩"
                     leftSection={<IconSpeakerphone size="1rem" stroke={1.5} />}
                     active={pathname === '/campaigns'}
                 />
